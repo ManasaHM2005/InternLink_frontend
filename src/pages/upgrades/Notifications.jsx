@@ -1,29 +1,56 @@
-import { useState } from 'react'
-import { mockNotifications } from '../../data/mockData'
+import { useState, useEffect } from 'react'
 import { FiBriefcase, FiCalendar, FiZap, FiUsers, FiSettings, FiBell } from 'react-icons/fi'
+import api from '../../api/api'
 import './UpgradePages.css'
 
 const typeIcons = {
     application: { icon: <FiBriefcase />, bg: 'var(--gradient-primary)' },
+    new_applicant: { icon: <FiBriefcase />, bg: 'var(--gradient-primary)' },
     interview: { icon: <FiCalendar />, bg: 'var(--gradient-secondary)' },
+    interview_scheduled: { icon: <FiCalendar />, bg: 'var(--gradient-secondary)' },
     recommendation: { icon: <FiZap />, bg: 'var(--gradient-success)' },
+    status_update: { icon: <FiBriefcase />, bg: 'var(--gradient-warm)' },
     social: { icon: <FiUsers />, bg: 'var(--gradient-warm)' },
     system: { icon: <FiSettings />, bg: 'linear-gradient(135deg, #64748b, #475569)' },
 }
 
 export default function Notifications() {
-    const [notifications, setNotifications] = useState(mockNotifications)
+    const [notifications, setNotifications] = useState([])
     const [filter, setFilter] = useState('all')
+    const [loading, setLoading] = useState(true)
 
-    const markAllRead = () => {
-        setNotifications(notifications.map(n => ({ ...n, read: true })))
+    useEffect(() => {
+        loadNotifications()
+    }, [])
+
+    const loadNotifications = async () => {
+        try {
+            const data = await api.get('/notifications/')
+            setNotifications(Array.isArray(data) ? data : [])
+        } catch (err) {
+            console.error('Failed to load notifications:', err)
+            setNotifications([])
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const markAllRead = async () => {
+        try {
+            await api.put('/notifications/read-all', {})
+        } catch (_) { /* ignore */ }
+        setNotifications(notifications.map(n => ({ ...n, is_read: true })))
     }
 
     const filtered = filter === 'all'
         ? notifications
         : filter === 'unread'
-            ? notifications.filter(n => !n.read)
+            ? notifications.filter(n => !n.is_read)
             : notifications.filter(n => n.type === filter)
+
+    if (loading) {
+        return <div className="page-container"><div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>Loading notifications...</div></div>
+    }
 
     return (
         <div className="page-container">
@@ -47,15 +74,15 @@ export default function Notifications() {
                 {filtered.map(n => {
                     const typeInfo = typeIcons[n.type] || typeIcons.system
                     return (
-                        <div className={`notif-page-item ${!n.read ? 'unread' : ''}`} key={n.id}>
+                        <div className={`notif-page-item ${!n.is_read ? 'unread' : ''}`} key={n.id}>
                             <div className="notif-type-icon" style={{ background: typeInfo.bg, color: 'white' }}>
                                 {typeInfo.icon}
                             </div>
                             <div style={{ flex: 1 }}>
-                                <p style={{ fontSize: '0.875rem', marginBottom: '0.15rem' }}>{n.message}</p>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{n.time}</span>
+                                <p style={{ fontSize: '0.875rem', marginBottom: '0.15rem' }}>{n.message || n.title}</p>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
                             </div>
-                            {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-blue)', flexShrink: 0 }}></div>}
+                            {!n.is_read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-blue)', flexShrink: 0 }}></div>}
                         </div>
                     )
                 })}

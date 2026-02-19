@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiMail, FiLock, FiUser, FiArrowRight } from 'react-icons/fi'
+import api from '../api/api'
 import './Auth.css'
 
 export default function Register() {
@@ -11,17 +12,30 @@ export default function Register() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
     const { login } = useAuth()
     const navigate = useNavigate()
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
-        setTimeout(() => {
-            login({ name, email, role })
+        setError('')
+        try {
+            const data = await api.post('/auth/register', { email, password, role })
+            login(
+                { id: data.user_id, name, email, role: data.role },
+                data.access_token
+            )
+            // Update profile with name
+            try {
+                await api.put('/users/profile', { full_name: name })
+            } catch (_) { /* non-critical */ }
             navigate(role === 'admin' ? '/admin/dashboard' : role === 'recruiter' ? '/recruiter/dashboard' : '/dashboard')
+        } catch (err) {
+            setError(err.message || 'Registration failed')
+        } finally {
             setLoading(false)
-        }, 800)
+        }
     }
 
     const roles = [
@@ -43,6 +57,8 @@ export default function Register() {
                     <h1 className="auth-logo">Intern<span>Link</span></h1>
                     <p>{step === 1 ? 'Choose your role to get started' : 'Create your account'}</p>
                 </div>
+
+                {error && <div style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
 
                 {step === 1 ? (
                     <div className="role-selection">

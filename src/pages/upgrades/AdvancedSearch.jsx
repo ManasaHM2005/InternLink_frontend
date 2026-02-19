@@ -1,24 +1,41 @@
-import { useState } from 'react'
-import { mockJobs } from '../../data/mockData'
+import { useState, useEffect } from 'react'
 import { FiMapPin, FiDollarSign, FiBriefcase, FiClock, FiUsers, FiBookmark, FiSave } from 'react-icons/fi'
+import api from '../../api/api'
 import './UpgradePages.css'
 
 export default function AdvancedSearch() {
     const [jobType, setJobType] = useState([])
     const [locations, setLocations] = useState([])
     const [stipendRange, setStipendRange] = useState(0)
+    const [jobs, setJobs] = useState([])
+    const [loading, setLoading] = useState(false)
     const [savedSearches, setSavedSearches] = useState(['React Internship in Bengaluru', 'Remote Data Science'])
 
     const toggleFilter = (arr, setArr, val) => {
         setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
     }
 
-    const filtered = mockJobs.filter(j => {
-        const matchType = jobType.length === 0 || jobType.includes(j.type)
-        const matchLoc = locations.length === 0 || locations.some(l => j.location.toLowerCase().includes(l.toLowerCase()))
-        const matchStipend = j.stipendValue >= stipendRange
-        return matchType && matchLoc && matchStipend
-    })
+    useEffect(() => {
+        fetchJobs()
+    }, [jobType, locations, stipendRange])
+
+    const fetchJobs = async () => {
+        setLoading(true)
+        try {
+            const params = new URLSearchParams()
+            if (locations.length > 0) params.append('location', locations.join(','))
+            if (stipendRange > 0) params.append('stipend_min', stipendRange)
+            if (jobType.length > 0) params.append('job_type', jobType.join(','))
+            params.append('page_size', '50')
+            const data = await api.get(`/users/jobs/search?${params.toString()}`)
+            setJobs(data.jobs || [])
+        } catch (err) {
+            console.error('Search error:', err)
+            setJobs([])
+        } finally {
+            setLoading(false)
+        }
+    }
 
     return (
         <div className="page-container">
@@ -82,29 +99,28 @@ export default function AdvancedSearch() {
 
                 {/* Results */}
                 <div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{filtered.length} results found</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>{loading ? 'Searching...' : `${jobs.length} results found`}</p>
                     <div className="jobs-grid">
-                        {filtered.map(job => (
+                        {jobs.map(job => (
                             <div className="job-card" key={job.id}>
                                 <div className="job-card-header">
-                                    <div className="job-logo">{job.logo}</div>
+                                    <div className="job-logo">💼</div>
                                     <div>
                                         <div className="job-title">{job.title}</div>
-                                        <div className="job-company">{job.company}</div>
+                                        <div className="job-company">{job.company_name || 'Company'}</div>
                                     </div>
-                                    <div className="match-badge" style={{ marginLeft: 'auto' }}>{job.matchScore}%</div>
                                 </div>
                                 <div className="job-meta">
-                                    <span><FiMapPin /> {job.location}</span>
-                                    <span><FiDollarSign /> {job.stipend}</span>
-                                    <span><FiBriefcase /> {job.type}</span>
-                                    <span><FiClock /> {job.posted}</span>
+                                    <span><FiMapPin /> {job.location || 'Remote'}</span>
+                                    {job.stipend_min && <span><FiDollarSign /> ₹{job.stipend_min}</span>}
+                                    <span><FiBriefcase /> {job.job_type || 'Internship'}</span>
+                                    {job.created_at && <span><FiClock /> {new Date(job.created_at).toLocaleDateString()}</span>}
                                 </div>
                                 <div className="job-card-footer">
                                     <div className="tags-container">
-                                        {job.skills.slice(0, 3).map(s => <span className="tag" key={s}>{s}</span>)}
+                                        {(job.skills_required || []).slice(0, 3).map(s => <span className="tag" key={s}>{s}</span>)}
                                     </div>
-                                    <span className="applicant-count"><FiUsers /> {job.applicants}</span>
+                                    {job.openings && <span className="applicant-count"><FiUsers /> {job.openings} openings</span>}
                                 </div>
                             </div>
                         ))}

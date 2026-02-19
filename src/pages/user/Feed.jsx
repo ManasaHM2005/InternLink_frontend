@@ -1,120 +1,124 @@
-import { useState } from 'react'
-import { mockPosts } from '../../data/mockData'
-import { FiHeart, FiMessageSquare, FiShare2, FiSend, FiUserPlus, FiUserCheck } from 'react-icons/fi'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import { FiHeart, FiMessageCircle, FiShare2, FiSend } from 'react-icons/fi'
+import api from '../../api/api'
 import './UserPages.css'
 
 export default function Feed() {
-    const [posts, setPosts] = useState(mockPosts)
+    const { user } = useAuth()
+    const [posts, setPosts] = useState([])
     const [newPost, setNewPost] = useState('')
-    const [following, setFollowing] = useState([2])
-    const [commentInputs, setCommentInputs] = useState({})
+    const [loading, setLoading] = useState(true)
 
-    const toggleLike = (postId) => {
-        setPosts(posts.map(p => p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p))
-    }
+    useEffect(() => {
+        loadFeed()
+    }, [])
 
-    const toggleFollow = (authorId) => {
-        setFollowing(f => f.includes(authorId) ? f.filter(id => id !== authorId) : [...f, authorId])
-    }
-
-    const addComment = (postId) => {
-        const text = commentInputs[postId]
-        if (!text?.trim()) return
-        setPosts(posts.map(p => p.id === postId ? { ...p, comments: [...p.comments, { id: Date.now(), author: 'You', text, time: 'Just now' }] } : p))
-        setCommentInputs({ ...commentInputs, [postId]: '' })
-    }
-
-    const handleNewPost = () => {
-        if (!newPost.trim()) return
-        const post = {
-            id: Date.now(), author: 'You', avatar: 'Y', role: 'Student',
-            time: 'Just now', content: newPost, likes: 0, comments: [], shares: 0, liked: false
+    const loadFeed = async () => {
+        try {
+            const data = await api.get('/social/feed')
+            setPosts(Array.isArray(data) ? data : [])
+        } catch (err) {
+            console.error('Failed to load feed:', err)
+            // Use empty feed on error
+            setPosts([])
+        } finally {
+            setLoading(false)
         }
-        setPosts([post, ...posts])
-        setNewPost('')
+    }
+
+    const handleCreatePost = async () => {
+        if (!newPost.trim()) return
+        try {
+            const data = await api.post('/social/posts', { content: newPost })
+            setPosts([data, ...posts])
+            setNewPost('')
+        } catch (err) {
+            // Add locally if API not available
+            const local = {
+                id: Date.now(),
+                content: newPost,
+                author_name: user?.name || 'You',
+                created_at: new Date().toISOString(),
+                likes_count: 0,
+                comments_count: 0,
+                liked_by_user: false,
+            }
+            setPosts([local, ...posts])
+            setNewPost('')
+        }
+    }
+
+    const handleLike = async (postId) => {
+        try {
+            await api.post(`/social/posts/${postId}/like`, {})
+        } catch (_) { /* ignore */ }
+        setPosts(posts.map(p => p.id === postId ? { ...p, likes_count: (p.likes_count || 0) + 1, liked_by_user: true } : p))
+    }
+
+    if (loading) {
+        return <div className="page-container"><div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>Loading feed...</div></div>
     }
 
     return (
         <div className="page-container">
             <div className="page-header">
-                <h1>📰 Social Feed</h1>
-                <p>Connect with professionals and stay updated</p>
+                <h1>📰 Community Feed</h1>
+                <p>Share insights and connect with the community</p>
             </div>
 
-            <div className="feed-layout">
-                {/* Create Post */}
-                <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
-                    <div className="create-post">
-                        <div className="avatar" style={{ background: 'var(--gradient-primary)' }}>Y</div>
-                        <textarea placeholder="Share something with the community..." value={newPost} onChange={e => setNewPost(e.target.value)} />
+            {/* Create Post */}
+            <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <div className="profile-avatar" style={{ width: '38px', height: '38px', fontSize: '0.9rem', flexShrink: 0 }}>
+                        {user?.name?.charAt(0) || 'U'}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                        <button className="btn btn-primary btn-sm" onClick={handleNewPost}>
-                            <FiSend /> Post
-                        </button>
+                    <div style={{ flex: 1 }}>
+                        <textarea
+                            className="input-field"
+                            placeholder="Share something with the community..."
+                            rows={3}
+                            value={newPost}
+                            onChange={e => setNewPost(e.target.value)}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleCreatePost} disabled={!newPost.trim()}>
+                                <FiSend /> Post
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Posts */}
+            {/* Posts */}
+            <div className="feed-posts">
                 {posts.map(post => (
-                    <div className="post-card" key={post.id}>
+                    <div className="glass-card feed-post" key={post.id}>
                         <div className="post-header">
-                            <div className="avatar" style={{ background: 'var(--gradient-secondary)' }}>{post.avatar}</div>
-                            <div className="post-author-info">
-                                <strong>{post.author}</strong>
-                                <small>{post.role}</small>
+                            <div className="profile-avatar" style={{ width: '36px', height: '36px', fontSize: '0.85rem' }}>
+                                {(post.author_name || 'U').charAt(0)}
                             </div>
-                            <span className="post-time">{post.time}</span>
-                            {post.author !== 'You' && (
-                                <button className="btn btn-sm btn-secondary" onClick={() => toggleFollow(post.id)} style={{ marginLeft: '0.5rem' }}>
-                                    {following.includes(post.id) ? <><FiUserCheck /> Following</> : <><FiUserPlus /> Follow</>}
-                                </button>
-                            )}
+                            <div>
+                                <strong style={{ fontSize: '0.9rem' }}>{post.author_name || 'User'}</strong>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{post.created_at ? new Date(post.created_at).toLocaleDateString() : ''}</p>
+                            </div>
                         </div>
-
-                        <div className="post-content">{post.content}</div>
-
+                        <p className="post-content">{post.content}</p>
                         <div className="post-actions">
-                            <button className={`post-action-btn ${post.liked ? 'liked' : ''}`} onClick={() => toggleLike(post.id)}>
-                                <FiHeart /> {post.likes}
+                            <button className={`post-action ${post.liked_by_user ? 'liked' : ''}`} onClick={() => handleLike(post.id)}>
+                                <FiHeart /> {post.likes_count || 0}
                             </button>
-                            <button className="post-action-btn">
-                                <FiMessageSquare /> {post.comments.length}
-                            </button>
-                            <button className="post-action-btn">
-                                <FiShare2 /> {post.shares}
-                            </button>
-                        </div>
-
-                        {/* Comments */}
-                        {post.comments.length > 0 && (
-                            <div className="post-comments">
-                                {post.comments.map(c => (
-                                    <div className="comment-item" key={c.id}>
-                                        <div className="avatar avatar-sm" style={{ background: 'var(--gradient-success)' }}>{c.author.charAt(0)}</div>
-                                        <div className="comment-body">
-                                            <strong>{c.author}</strong>
-                                            <p>{c.text}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Comment Input */}
-                        <div className="comment-input">
-                            <input
-                                placeholder="Write a comment..."
-                                value={commentInputs[post.id] || ''}
-                                onChange={e => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                                onKeyDown={e => e.key === 'Enter' && addComment(post.id)}
-                            />
-                            <button className="btn btn-sm btn-primary" onClick={() => addComment(post.id)}>
-                                <FiSend />
-                            </button>
+                            <button className="post-action"><FiMessageCircle /> {post.comments_count || 0}</button>
+                            <button className="post-action"><FiShare2 /> Share</button>
                         </div>
                     </div>
                 ))}
+                {posts.length === 0 && (
+                    <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                        <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📰</p>
+                        <p>No posts yet. Be the first to share something!</p>
+                    </div>
+                )}
             </div>
         </div>
     )

@@ -8,14 +8,22 @@ export function AuthProvider({ children }) {
         return saved ? JSON.parse(saved) : null
     })
 
-    const login = (userData) => {
+    const [token, setToken] = useState(() => {
+        return localStorage.getItem('internlink_token') || null
+    })
+
+    const login = (userData, accessToken) => {
         setUser(userData)
+        setToken(accessToken)
         localStorage.setItem('internlink_user', JSON.stringify(userData))
+        localStorage.setItem('internlink_token', accessToken)
     }
 
     const logout = () => {
         setUser(null)
+        setToken(null)
         localStorage.removeItem('internlink_user')
+        localStorage.removeItem('internlink_token')
     }
 
     const switchRole = (role) => {
@@ -25,7 +33,7 @@ export function AuthProvider({ children }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, switchRole }}>
+        <AuthContext.Provider value={{ user, token, login, logout, switchRole }}>
             {children}
         </AuthContext.Provider>
     )
