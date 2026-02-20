@@ -25,7 +25,11 @@ async function request(endpoint, options = {}) {
         let errorMessage = `Request failed (${res.status})`
         try {
             const errorData = await res.json()
-            errorMessage = errorData.detail || errorData.message || errorMessage
+            if (Array.isArray(errorData.detail)) {
+                errorMessage = errorData.detail.map(err => err.msg || JSON.stringify(err)).join(', ')
+            } else {
+                errorMessage = errorData.detail || errorData.message || errorMessage
+            }
         } catch (_) {
             // response wasn't JSON
         }

@@ -45,7 +45,10 @@ export default function JobSearch() {
     const handleApply = async (jobId) => {
         setApplyingId(jobId)
         try {
-            await api.post(`/users/jobs/${jobId}/apply`, { cover_letter: 'I am interested in this position.' })
+            await api.post(`/users/jobs/${jobId}/apply`, {
+                job_id: jobId,
+                cover_letter: 'I am interested in this position.'
+            })
             setApplied([...applied, jobId])
         } catch (err) {
             alert(err.message || 'Failed to apply')

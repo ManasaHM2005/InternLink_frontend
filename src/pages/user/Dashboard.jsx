@@ -26,7 +26,7 @@ export default function Dashboard() {
             setJobs(jobsData?.jobs || [])
 
             try {
-                const notifData = await api.get('/notifications/')
+                const notifData = await api.get('/notifications')
                 setNotifications(Array.isArray(notifData) ? notifData : [])
             } catch (_) {
                 setNotifications([])

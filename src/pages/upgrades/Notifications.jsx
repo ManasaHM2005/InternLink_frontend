@@ -25,7 +25,7 @@ export default function Notifications() {
 
     const loadNotifications = async () => {
         try {
-            const data = await api.get('/notifications/')
+            const data = await api.get('/notifications')
             setNotifications(Array.isArray(data) ? data : [])
         } catch (err) {
             console.error('Failed to load notifications:', err)

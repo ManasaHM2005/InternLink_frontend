@@ -16,7 +16,7 @@ export default function Feed() {
 
     const loadFeed = async () => {
         try {
-            const data = await api.get('/social/feed')
+            const data = await api.get('/social/posts/explore')
             setPosts(Array.isArray(data) ? data : [])
         } catch (err) {
             console.error('Failed to load feed:', err)

@@ -1,13 +1,26 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiBell, FiLogOut, FiSearch, FiMenu } from 'react-icons/fi'
-import { mockNotifications } from '../data/mockData'
+import api from '../api/api'
 import './Navbar.css'
 
 export default function Navbar({ onToggleSidebar }) {
     const { user, logout, switchRole } = useAuth()
     const navigate = useNavigate()
-    const unreadCount = mockNotifications.filter(n => !n.read).length
+    const [unreadCount, setUnreadCount] = useState(0)
+
+    useEffect(() => {
+        const fetchUnread = async () => {
+            try {
+                const data = await api.get('/notifications/unread-count')
+                setUnreadCount(data.unread_count || 0)
+            } catch (_) { }
+        }
+        fetchUnread()
+        const interval = setInterval(fetchUnread, 30000) // Polling every 30s
+        return () => clearInterval(interval)
+    }, [])
 
     const handleLogout = () => {
         logout()

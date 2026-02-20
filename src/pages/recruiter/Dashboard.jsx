@@ -1,15 +1,43 @@
-import { useState } from 'react'
-import { mockJobs, mockApplications } from '../../data/mockData'
-import { FiBriefcase, FiUsers, FiTrendingUp, FiPlusCircle, FiDownload, FiFilter } from 'react-icons/fi'
+import { useState, useEffect } from 'react'
+import { FiBriefcase, FiUsers, FiTrendingUp, FiPlusCircle, FiFilter, FiEye } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
+import api from '../../api/api'
 import './RecruiterPages.css'
 
 export default function RecruiterDashboard() {
+    const [analytics, setAnalytics] = useState(null)
+    const [jobs, setJobs] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        loadDashboard()
+    }, [])
+
+    const loadDashboard = async () => {
+        try {
+            const [analyticsData, jobsData] = await Promise.all([
+                api.get('/recruiter/analytics'),
+                api.get('/recruiter/jobs')
+            ])
+            setAnalytics(analyticsData)
+            setJobs(jobsData)
+        } catch (err) {
+            setError(err.message || 'Failed to load dashboard')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (loading) {
+        return <div className="page-container"><div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>Loading recruiter dashboard...</div></div>
+    }
+
     const stats = [
-        { label: 'Active Listings', value: mockJobs.length, icon: <FiBriefcase />, gradient: 'var(--gradient-primary)' },
-        { label: 'Total Applicants', value: 424, icon: <FiUsers />, gradient: 'var(--gradient-success)' },
-        { label: 'Shortlisted', value: 56, icon: <FiFilter />, gradient: 'var(--gradient-secondary)' },
-        { label: 'Hire Rate', value: '23%', icon: <FiTrendingUp />, gradient: 'var(--gradient-warm)' },
+        { label: 'Active Listings', value: analytics?.active_jobs || 0, icon: <FiBriefcase />, gradient: 'var(--gradient-primary)' },
+        { label: 'Total Applicants', value: analytics?.total_applications || 0, icon: <FiUsers />, gradient: 'var(--gradient-success)' },
+        { label: 'Profile Views', value: analytics?.total_views || 0, icon: <FiEye />, gradient: 'var(--gradient-secondary)' },
+        { label: 'Avg Apps/Job', value: analytics?.avg_applications_per_job || 0, icon: <FiTrendingUp />, gradient: 'var(--gradient-warm)' },
     ]
 
     return (
@@ -21,6 +49,8 @@ export default function RecruiterDashboard() {
                 </div>
                 <Link to="/recruiter/post-job" className="btn btn-primary"><FiPlusCircle /> Post New Job</Link>
             </div>
+
+            {error && <div className="glass-card" style={{ color: 'var(--accent-red)', padding: '1rem', marginBottom: '1.5rem', textAlign: 'center' }}>{error}</div>}
 
             <div className="grid grid-4 stats-grid">
                 {stats.map((stat, i) => (
@@ -38,47 +68,58 @@ export default function RecruiterDashboard() {
                 <div className="glass-card">
                     <div className="card-header">
                         <h3>Active Listings</h3>
-                        <Link to="/recruiter/post-job" className="btn btn-sm btn-secondary">Add New</Link>
+                        <Link to="/recruiter/jobs" className="btn btn-sm btn-secondary">Manage All</Link>
                     </div>
-                    {mockJobs.slice(0, 4).map(job => (
-                        <div className="app-item" key={job.id} style={{ marginBottom: '0.5rem' }}>
+                    {jobs.length > 0 ? jobs.slice(0, 4).map(job => (
+                        <div className="app-item" key={job.id} style={{ marginBottom: '0.5rem', padding: '1rem' }}>
                             <div className="app-info">
-                                <strong>{job.logo} {job.title}</strong>
-                                <span className="app-company">{job.applicants} applicants · {job.posted}</span>
+                                <strong>💼 {job.title}</strong>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {job.location} · {job.job_type}
+                                </div>
                             </div>
-                            <span className="badge badge-applied">{job.type}</span>
+                            <Link to={`/recruiter/applicants?job_id=${job.id}`} className="badge badge-applied" style={{ textDecoration: 'none' }}>
+                                View Applicants
+                            </Link>
                         </div>
-                    ))}
+                    )) : (
+                        <p style={{ padding: '1rem', color: 'var(--text-muted)', textAlign: 'center' }}>No jobs posted yet.</p>
+                    )}
                 </div>
 
                 <div className="glass-card">
                     <div className="card-header">
-                        <h3>Recent Applicants</h3>
-                        <Link to="/recruiter/applicants" className="btn btn-sm btn-secondary">View All</Link>
+                        <h3>Status Breakdown</h3>
+                        <div className="btn btn-sm btn-secondary">Live Stats</div>
                     </div>
-                    {['Manasa H M', 'Rahul Kumar', 'Sneha Mehta', 'Ananya Rao'].map((name, i) => (
-                        <div className="app-item" key={i} style={{ marginBottom: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <div className="avatar avatar-sm" style={{ background: 'var(--gradient-primary)' }}>{name.charAt(0)}</div>
-                                <div className="app-info">
-                                    <strong>{name}</strong>
-                                    <span className="app-company">Frontend Developer Intern</span>
+                    <div style={{ padding: '0.5rem' }}>
+                        {analytics?.status_breakdown && Object.keys(analytics.status_breakdown).length > 0 ? (
+                            Object.entries(analytics.status_breakdown).map(([status, count]) => (
+                                <div className="app-item" key={status} style={{ marginBottom: '0.5rem' }}>
+                                    <div className="app-info">
+                                        <strong style={{ textTransform: 'capitalize' }}>{status.replace('_', ' ')}</strong>
+                                    </div>
+                                    <span className={`badge badge-${status}`}>{count}</span>
                                 </div>
-                            </div>
-                            <span className={`badge badge-${['shortlisted', 'applied', 'interview', 'selected'][i]}`}>
-                                {['shortlisted', 'applied', 'interview', 'selected'][i]}
-                            </span>
-                        </div>
-                    ))}
+                            ))
+                        ) : (
+                            <p style={{ padding: '1rem', color: 'var(--text-muted)', textAlign: 'center' }}>No applications received yet.</p>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Quick Chart Placeholder */}
             <div className="glass-card" style={{ marginTop: '1.5rem' }}>
-                <h3 style={{ marginBottom: '1rem' }}>📊 Application Trends</h3>
+                <h3 style={{ marginBottom: '1rem' }}>📊 Job Performance</h3>
                 <div className="chart-placeholder">
                     <div className="chart-bars">
-                        {[65, 80, 45, 90, 70, 55, 85].map((h, i) => (
+                        {analytics?.jobs_analytics?.slice(0, 7).map((job, i) => (
+                            <div key={job.job_id} className="chart-bar-wrapper">
+                                <div className="chart-bar" style={{ height: `${Math.min(job.applications * 10, 100)}%` }}></div>
+                                <span title={job.title}>{job.title.substring(0, 6)}...</span>
+                            </div>
+                        )) || [65, 80, 45, 90, 70, 55, 85].map((h, i) => (
                             <div key={i} className="chart-bar-wrapper">
                                 <div className="chart-bar" style={{ height: `${h}%` }}></div>
                                 <span>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</span>
@@ -90,3 +131,4 @@ export default function RecruiterDashboard() {
         </div>
     )
 }
+
