@@ -14,7 +14,7 @@ export default function PostJob() {
         stipend_max: '',
         duration: '',
         openings: 1,
-        application_deadline: '',
+        deadline: '',
     })
     const [skills, setSkills] = useState([])
     const [skillInput, setSkillInput] = useState('')
@@ -42,10 +42,12 @@ export default function PostJob() {
         try {
             const payload = {
                 ...formData,
+                requirements: formData.requirements.split(/,|\n/).map(r => r.trim()).filter(r => r !== ""),
                 skills_required: skills,
                 stipend_min: formData.stipend_min ? Number(formData.stipend_min) : null,
                 stipend_max: formData.stipend_max ? Number(formData.stipend_max) : null,
                 openings: Number(formData.openings) || 1,
+                deadline: formData.deadline || null,
             }
             await api.post('/recruiter/jobs', payload)
             setSuccess(true)
@@ -63,7 +65,7 @@ export default function PostJob() {
                     <FiCheckCircle style={{ fontSize: '3rem', color: 'var(--accent-green)', marginBottom: '1rem' }} />
                     <h2>Job Posted Successfully! 🎉</h2>
                     <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Your job listing is now live.</p>
-                    <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => { setSuccess(false); setFormData({ title: '', description: '', requirements: '', location: '', job_type: 'Internship', stipend_min: '', stipend_max: '', duration: '', openings: 1, application_deadline: '' }); setSkills([]) }}>
+                    <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => { setSuccess(false); setFormData({ title: '', description: '', requirements: '', location: '', job_type: 'Internship', stipend_min: '', stipend_max: '', duration: '', openings: 1, deadline: '' }); setSkills([]) }}>
                         Post Another Job
                     </button>
                 </div>
@@ -149,7 +151,7 @@ export default function PostJob() {
 
                     <div className="input-group">
                         <label>Application Deadline</label>
-                        <input className="input-field" type="date" value={formData.application_deadline} onChange={e => handleChange('application_deadline', e.target.value)} />
+                        <input className="input-field" type="date" value={formData.deadline} onChange={e => handleChange('deadline', e.target.value)} />
                     </div>
                 </div>
 
