@@ -35,10 +35,13 @@ export default function AIInterview() {
             const response = [
                 `Great! Let's prepare for the **${data.job_title || job?.title}** role.`,
                 '',
-                '**Common Interview Questions:**',
-                ...(data.questions || []).map((q, i) => `${i + 1}. ${q}`),
+                '**Recommended Focus Areas:**',
+                ...(data.focus_areas || []).map(f => `• ${f}`),
                 '',
-                '**Tips:**',
+                '**Potential Interview Questions:**',
+                ...(data.questions || []).map((q, i) => `${i + 1}. **${q.question}** (${q.difficulty})`),
+                '',
+                '**Expert Tips:**',
                 ...(data.tips || []).map(t => `• ${t}`),
                 '',
                 'Would you like me to ask you practice questions? Just say "Practice" to begin!'

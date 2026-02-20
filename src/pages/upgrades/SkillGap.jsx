@@ -109,12 +109,42 @@ export default function SkillGap() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {gapData.learning_suggestions && gapData.learning_suggestions.length > 0 && (
                             <div className="glass-card">
-                                <h3>🎓 Learning Suggestions</h3>
-                                <div className="suggestions-list" style={{ marginTop: '0.5rem' }}>
+                                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>🎓 Learning Suggestions</h3>
+                                <div className="suggestions-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {gapData.learning_suggestions.map((s, i) => (
-                                        <div className="suggestion-item" key={i}>
-                                            <span className="suggestion-icon">📘</span>
-                                            <div><strong>{s}</strong></div>
+                                        <div className="suggestion-item" key={i} style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            padding: '1rem',
+                                            borderRadius: '0.75rem',
+                                            borderLeft: `4px solid ${s.priority === 'high' ? '#ef4444' : 'var(--accent-blue)'}`
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{s.skill || s}</strong>
+                                                <span style={{
+                                                    fontSize: '0.7rem',
+                                                    textTransform: 'uppercase',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '4px',
+                                                    background: s.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                                                    color: s.priority === 'high' ? '#ef4444' : 'var(--accent-blue)'
+                                                }}>{s.priority} Priority</span>
+                                            </div>
+                                            {s.resources && s.resources.length > 0 && (
+                                                <div style={{ marginTop: '0.5rem' }}>
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>RESOURCES:</p>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                        {s.resources.map((res, ri) => (
+                                                            <span key={ri} style={{
+                                                                fontSize: '0.8rem',
+                                                                color: 'var(--accent-blue)',
+                                                                background: 'rgba(59, 130, 246, 0.1)',
+                                                                padding: '2px 8px',
+                                                                borderRadius: '4px'
+                                                            }}>{res}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
